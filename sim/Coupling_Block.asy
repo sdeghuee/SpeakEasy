@@ -1,0 +1,10 @@
+Version 4
+SymbolType BLOCK
+RECTANGLE Normal 98 33 -80 -32
+WINDOW 0 -31 -41 Left 0
+PIN -80 0 LEFT 8
+PINATTR PinName decoup
+PINATTR SpiceOrder 1
+PIN 96 0 RIGHT 8
+PINATTR PinName Coup
+PINATTR SpiceOrder 2
