@@ -1,0 +1,4 @@
+Record=TopLevelDocument|FileName=SpeakEasy_Power.SchDoc
+Record=SheetSymbol|SourceDocument=SpeakEasy_Power.SchDoc|Designator=Designator|SchDesignator=Designator|FileName=SpeakEasy_Buck.SchDoc|SymbolType=Normal|RawFileName=SpeakEasy_Buck.SchDoc|DesignItemId= |SourceLibraryName= |ObjectKind=Sheet Symbol|RevisionGUID= |ItemGUID= |VaultGUID= 
+Record=SheetSymbol|SourceDocument=SpeakEasy_Power.SchDoc|Designator=Designator|SchDesignator=Designator|FileName=SpeakEasy_Power_Connectors.SchDoc|SymbolType=Normal|RawFileName=SpeakEasy_Power_Connectors.SchDoc|DesignItemId= |SourceLibraryName= |ObjectKind=Sheet Symbol|RevisionGUID= |ItemGUID= |VaultGUID= 
+Record=SheetSymbol|SourceDocument=SpeakEasy_Power.SchDoc|Designator=Designator|SchDesignator=Designator|FileName=SpeakEasy_POE.SchDoc|SymbolType=Normal|RawFileName=SpeakEasy_POE.SchDoc|DesignItemId= |SourceLibraryName= |ObjectKind=Sheet Symbol|RevisionGUID= |ItemGUID= |VaultGUID= 

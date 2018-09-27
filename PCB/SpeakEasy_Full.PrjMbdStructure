@@ -1,0 +1,6 @@
+Record=DiagramHierarchy|SourceDocument=SpeakEasy_Full.MbsDoc|Kind=Multi-board Schematic Module|Designator=3|Source=SpeakEasy_Audio.PrjPcb
+Record=SubProject|SourceDocument=SpeakEasy_Full.MbsDoc|ProjectPath=SpeakEasy_Audio.PrjPcb
+Record=DiagramHierarchy|SourceDocument=SpeakEasy_Full.MbsDoc|Kind=Multi-board Schematic Module|Designator=2|Source=SpeakEasy_Logic.PrjPcb
+Record=SubProject|SourceDocument=SpeakEasy_Full.MbsDoc|ProjectPath=SpeakEasy_Logic.PrjPcb
+Record=DiagramHierarchy|SourceDocument=SpeakEasy_Full.MbsDoc|Kind=Multi-board Schematic Module|Designator=1|Source=SpeakEasy_Power.PrjPcb
+Record=SubProject|SourceDocument=SpeakEasy_Full.MbsDoc|ProjectPath=SpeakEasy_Power.PrjPcb
