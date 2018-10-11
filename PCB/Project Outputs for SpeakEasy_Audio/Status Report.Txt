@@ -1,0 +1,36 @@
+Project Outputs Generation Report
+---------------------------------
+Start Output Generation At 2:40:43 PM On 10/9/2018
+
+Output: Gerber X2 Files
+Type  : GerberX2
+From  : PCB Document [SpeakEasy_Audio.PcbDoc]
+   Generated File[SpeakEasy_Audio_Copper_Signal_Top.gbr]
+   Generated File[SpeakEasy_Audio_Copper_Signal_Bot.gbr]
+   Generated File[SpeakEasy_Audio_Pads_Bot.gbr]
+   Generated File[SpeakEasy_Audio_Pads_Top.gbr]
+   Generated File[SpeakEasy_Audio_Legend_Bot.gbr]
+   Generated File[SpeakEasy_Audio_Soldermask_Bot.gbr]
+   Generated File[SpeakEasy_Audio_Paste_Bot.gbr]
+   Generated File[SpeakEasy_Audio_Legend_Top.gbr]
+   Generated File[SpeakEasy_Audio_Paste_Top.gbr]
+   Generated File[SpeakEasy_Audio_Soldermask_Top.gbr]
+   Generated File[SpeakEasy_Audio_Keep-out.gbr]
+   Generated File[SpeakEasy_Audio_Mechanical_13.gbr]
+   Generated File[SpeakEasy_Audio_Mechanical_1.gbr]
+   Generated File[SpeakEasy_Audio_Mechanical_7.gbr]
+   Generated File[SpeakEasy_Audio_Mechanical_15.gbr]
+   Generated File[SpeakEasy_Audio_Profile.gbr]
+   Generated File[SpeakEasy_Audio_NPTH_Drill.gbr]
+   Generated File[SpeakEasy_Audio_PTH_Drill.gbr]
+   Generated File[SpeakEasy_Audio_Drawing_1.gbr]
+   Generated File[SpeakEasy_Audio_Drillmap_1.gbr]
+   Generated File[SpeakEasy_Audio.RUL]
+   Generated File[SpeakEasy_Audio.EXTREP]
+   Generated File[SpeakEasy_Audio.REP]
+
+
+Files Generated   : 23
+Documents Printed : 0
+
+Finished Output Generation At 2:40:49 PM On 10/9/2018
