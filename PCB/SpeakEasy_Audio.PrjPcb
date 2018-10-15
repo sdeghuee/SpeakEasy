@@ -38,23 +38,6 @@ PrefsVaultGUID=
 PrefsRevisionGUID=
 
 [Document1]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\SpeakEasy_Audio.OutJob
-AnnotationEnabled=1
-AnnotateStartValue=1
-AnnotationIndexControlEnabled=0
-AnnotateSuffix=
-AnnotateScope=All
-AnnotateOrder=-1
-DoLibraryUpdate=1
-DoDatabaseUpdate=1
-ClassGenCCAutoEnabled=1
-ClassGenCCAutoRoomEnabled=1
-ClassGenNCAutoScope=None
-DItemRevisionGUID=
-GenerateClassCluster=0
-DocumentUniqueId=
-
-[Document2]
 DocumentPath=ColorOrgan_LEDs.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -71,7 +54,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=EWJSQKXO
 
-[Document3]
+[Document2]
 DocumentPath=Amplifier.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -88,7 +71,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=KIXKIXHQ
 
-[Document4]
+[Document3]
 DocumentPath=Audio_Connectors.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -105,7 +88,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=UJPNSYEP
 
-[Document5]
+[Document4]
 DocumentPath=SpeakEasy_Audio.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -122,7 +105,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=KBXILLRU
 
-[Document6]
+[Document5]
 DocumentPath=SpeakEasy_Audio.PcbDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -139,7 +122,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=MBCENIUY
 
-[Document7]
+[Document6]
 DocumentPath=Audio_Filters.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -156,8 +139,8 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=OGQJIRKJ
 
-[Document8]
-DocumentPath=Project Outputs for SpeakEasy_Audio\CAMtastic1.Cam
+[Document7]
+DocumentPath=SpeakEasy_Audio.OutJob
 AnnotationEnabled=1
 AnnotateStartValue=1
 AnnotationIndexControlEnabled=0
@@ -172,183 +155,6 @@ ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
-
-[Document9]
-DocumentPath=Project Outputs for SpeakEasy_Audio\CAMtastic2.Cam
-AnnotationEnabled=1
-AnnotateStartValue=1
-AnnotationIndexControlEnabled=0
-AnnotateSuffix=
-AnnotateScope=All
-AnnotateOrder=-1
-DoLibraryUpdate=1
-DoDatabaseUpdate=1
-ClassGenCCAutoEnabled=1
-ClassGenCCAutoRoomEnabled=1
-ClassGenNCAutoScope=None
-DItemRevisionGUID=
-GenerateClassCluster=0
-DocumentUniqueId=
-
-[GeneratedDocument1]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.DRR
-DItemRevisionGUID=
-
-[GeneratedDocument2]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio.EXTREP
-DItemRevisionGUID=
-
-[GeneratedDocument3]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.EXTREP
-DItemRevisionGUID=
-
-[GeneratedDocument4]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GBL
-DItemRevisionGUID=
-
-[GeneratedDocument5]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GBO
-DItemRevisionGUID=
-
-[GeneratedDocument6]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GBS
-DItemRevisionGUID=
-
-[GeneratedDocument7]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GKO
-DItemRevisionGUID=
-
-[GeneratedDocument8]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GM1
-DItemRevisionGUID=
-
-[GeneratedDocument9]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GM7
-DItemRevisionGUID=
-
-[GeneratedDocument10]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GM13
-DItemRevisionGUID=
-
-[GeneratedDocument11]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GM15
-DItemRevisionGUID=
-
-[GeneratedDocument12]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GTL
-DItemRevisionGUID=
-
-[GeneratedDocument13]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GTO
-DItemRevisionGUID=
-
-[GeneratedDocument14]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.GTS
-DItemRevisionGUID=
-
-[GeneratedDocument15]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.LDP
-DItemRevisionGUID=
-
-[GeneratedDocument16]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio.REP
-DItemRevisionGUID=
-
-[GeneratedDocument17]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.REP
-DItemRevisionGUID=
-
-[GeneratedDocument18]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio.RUL
-DItemRevisionGUID=
-
-[GeneratedDocument19]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.RUL
-DItemRevisionGUID=
-
-[GeneratedDocument20]
-DocumentPath=Project Outputs for SpeakEasy_Audio\SpeakEasy_Audio.TXT
-DItemRevisionGUID=
-
-[GeneratedDocument21]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Copper_Signal_Bot.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument22]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Copper_Signal_Top.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument23]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Drawing_1.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument24]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Drillmap_1.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument25]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Keep-out.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument26]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Legend_Bot.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument27]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Legend_Top.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument28]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Mechanical_1.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument29]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Mechanical_7.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument30]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Mechanical_13.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument31]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Mechanical_15.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument32]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_NPTH_Drill.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument33]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Pads_Bot.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument34]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Pads_Top.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument35]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Paste_Bot.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument36]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Paste_Top.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument37]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Profile.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument38]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_PTH_Drill.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument39]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Soldermask_Bot.gbr
-DItemRevisionGUID=
-
-[GeneratedDocument40]
-DocumentPath=..\..\GitHub\SpeakEasy\PCB\Project Outputs for SpeakEasy_Audio\GerberX2\SpeakEasy_Audio_Soldermask_Top.gbr
-DItemRevisionGUID=
 
 [Configuration1]
 Name=Sources
