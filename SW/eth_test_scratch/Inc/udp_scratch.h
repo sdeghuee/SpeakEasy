@@ -31,6 +31,7 @@
 
 /* USER CODE BEGIN Private function prototypes */
 void udp_scratch_connect();
+void udp_receive_init();
 void udp_scratch_send(char * data);
 void udp_receive_callback(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *addr, uint16_t port);
 /* USER CODE END Private function prototypes */

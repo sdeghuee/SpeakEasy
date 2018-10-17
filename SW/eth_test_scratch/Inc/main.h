@@ -363,6 +363,7 @@
 //#define GW_ADDR1   (uint8_t) 168
 //#define GW_ADDR2   (uint8_t) 0
 //#define GW_ADDR3   (uint8_t) 1
+void i2c_play();
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

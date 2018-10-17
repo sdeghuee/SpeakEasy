@@ -65,6 +65,7 @@ I2C_HandleTypeDef hi2c1;
 SD_HandleTypeDef hsd;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart3;
 
@@ -79,6 +80,17 @@ uint32_t msCount = 0;
 uint32_t clockCount = 0;
 uint8_t buttonPress = 0;
 uint8_t buttonPrev = 0;
+uint32_t count = 0;
+uint32_t value = 0;
+uint8_t controlData[2];
+uint8_t controlAddress = 124;
+uint8_t control;
+uint8_t delay = 128;
+/*
+ * 1 : play/pause
+ * 2 : back
+ * 3 : forward
+ */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,6 +103,7 @@ static void MX_I2C1_Init(void);
 static void MX_SDIO_SD_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -98,25 +111,61 @@ static void MX_TIM2_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
-	if (clockCount++ == 44) {
-//		HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_8);
-		clockCount = 0;
-		msCount++;
-		uint8_t buttonCurr = !HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_15);
-		buttonPress = !buttonPrev && buttonCurr;
-		buttonPrev = buttonCurr;
-		HAL_GPIO_WritePin(GPIOG, GPIO_PIN_8, netif_is_up(&gnetif));
+extern void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc) {
+	value = HAL_ADC_GetValue(hadc);
+	if (!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)) {
+		uint8_t data[100];
+		sprintf((char*) data, " %d ", (int) value);
+		udp_scratch_send((char*) data);
 	}
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  if (GPIO_Pin == GPIO_PIN_14)
-  {
-    ethernetif_set_link(&gnetif);
-  }
+void i2c_play() {
+	controlData[1] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1,controlAddress,controlData,2,10);
+	controlData[1] = 0x0C;
+	delay = 128;
 }
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
+	if (htim->Instance == TIM2) {
+		if (clockCount++ == 44) {
+	//		HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_8);
+			clockCount = 0;
+			msCount++;
+			uint8_t buttonCurr = !HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_15);
+			buttonPress = !buttonPrev && buttonCurr;
+			buttonPrev = buttonCurr;
+			HAL_GPIO_WritePin(GPIOG, GPIO_PIN_8, netif_is_up(&gnetif));
+
+			if (!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) && !HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_15)) {
+				uint8_t data[100];
+				sprintf((char*) data, " %d ", count);
+				udp_scratch_send((char*) data);
+				count = 0;
+			}
+		}
+		if (!delay) {
+			HAL_I2C_Master_Transmit(&hi2c1,controlAddress,controlData,2,10);
+			controlData[1] = 0x0C;
+			delay = 128;
+		}
+		else {
+			delay--;
+		}
+	}
+	else if (htim->Instance == TIM3) {
+		HAL_ADC_Start_IT(&hadc3);
+	}
+}
+
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+//{
+//  if (GPIO_Pin == GPIO_PIN_14)
+//  {
+//    ethernetif_set_link(&gnetif);
+//  }
+//}
 
 /* USER CODE END 0 */
 
@@ -157,13 +206,18 @@ int main(void)
   MX_USART3_UART_Init();
   MX_LWIP_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   ethernetif_init(&gnetif);
-  udp_scratch_connect();
+  //udp_scratch_connect();
+  udp_receive_init();
   HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim3);
   if (netif_is_up(&gnetif)) {
 	  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_8, 1);
   }
+  controlData[0] = 0x00;
+  controlData[1] = 0x0C;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -174,7 +228,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  ethernetif_set_link(&gnetif);
+//	  ethernetif_set_link(&gnetif);
 	  if (netif_is_up(&gnetif)) {
 		  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_8, 1);
 		  ethernetif_input(&gnetif);
@@ -184,11 +238,19 @@ int main(void)
 	  }
 	  if (buttonPress) {
 		  buttonPress = 0;
-		  uint8_t data[100];
-		  sprintf((char*) data, " %d ", 100);
-		  udp_scratch_send((char*) data);
+		  i2c_play();
+//		  uint8_t data[100];
+//		  sprintf((char*) data, " %d ", 100*(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)));
+//		  udp_scratch_send((char*) data);
 		  HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_6);
 	  }
+//	  if (!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) && !HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_15)) {
+//		  uint8_t data[100];
+//		  sprintf((char*) data, " %d ", 100);
+//		  udp_scratch_send((char*) data);
+//		  HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_6);
+//		  count++;
+//	  }
   }
   /* USER CODE END 3 */
 
@@ -379,6 +441,38 @@ static void MX_TIM2_Init(void)
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* TIM3 init function */
+static void MX_TIM3_Init(void)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 953;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -652,8 +746,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : MII_INT_Pin */
   GPIO_InitStruct.Pin = MII_INT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  //GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(MII_INT_GPIO_Port, &GPIO_InitStruct);
 

@@ -39,6 +39,28 @@ void udp_scratch_connect() {
 	}
 }
 
+void udp_receive_init(void)
+{
+   struct udp_pcb *upcb;
+   err_t err;
+
+   /* Create a new UDP control block  */
+   upcb = udp_new();
+
+   if (upcb)
+   {
+     /* Bind the upcb to the UDP_PORT port */
+     /* Using IP_ADDR_ANY allow the upcb to be used by any local interface */
+      err = udp_bind(upcb, IP_ADDR_ANY, UDP_SERVER_PORT);
+
+      if(err == ERR_OK)
+      {
+        /* Set a receive callback for the upcb */
+        udp_recv(upcb, udp_receive_callback, NULL);
+      }
+   }
+}
+
 void udp_scratch_send(char * txData) {
 	struct pbuf *p;
 	p = pbuf_alloc(PBUF_TRANSPORT, strlen((char*) txData), PBUF_POOL);
@@ -58,6 +80,9 @@ void udp_scratch_send(char * txData) {
 }
 
 void udp_receive_callback(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *addr, uint16_t port) {
+    char * ptr = p->payload;
+    HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+	i2c_play();
 	pbuf_free(p);
 }
 /* USER CODE END Private function definitions */
