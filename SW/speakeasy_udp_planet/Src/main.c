@@ -87,11 +87,13 @@ uint8_t buttonPrev[5] = {0, 0, 0, 0, 0};
 // ethernet
 extern struct netif gnetif;
 uint8_t rxDone = 0;
+uint16_t playbackControl = NOP;
 
 // audio
 uint8_t playbackStarted = 0;
 uint8_t zeroReceived = 0;
 uint8_t bufferReceived[10];
+uint8_t playing = 1;
 uint16_t * rxData;
 uint16_t rxBuffer[10 * BUFF_SIZE];
 uint16_t rxIndex = 0;
@@ -133,9 +135,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 		}
 		if (playbackStarted) {
 			if (bufferReceived[checkIndex - 6] && playbackStarted) {
-			// DAC output
-				if (rxBuffer[playbackIndex] > 500) {
-//				HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, 2048);
+				// DAC output
+				if (rxBuffer[playbackIndex] > 500) {	// fix this or check it's still needed, maybe remove reset
 					HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, rxBuffer[playbackIndex++]);
 				}
 				else {
@@ -147,7 +148,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 				resetIndex += 10*BUFF_SIZE;
 			}
 			rxBuffer[resetIndex - 2] = 0x00;
-//			rxBuffer[playbackIndex - 2] = 0x00;
 			if (playbackIndex % BUFF_SIZE == 0) {
 				// playback done with packet, so mark as not received
 				bufferReceived[(playbackIndex - 1) / BUFF_SIZE]	= 0;
@@ -200,19 +200,19 @@ void debounceButton() {
 void checkButtonPress() {
 	for (uint8_t i = 0; i < 5; i++) {
 	  if (buttonPress[i]) {
-		  uint16_t _txTmp[10];
 		  switch (i) {
 			  case 0:
 				  break;
 			  case 1:
+				  playbackControl = Prev;
 				  break;
 			  case 2:	//Play Pause
-				  HAL_GPIO_TogglePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin);
+				  playing ^= 1;
+				  playbackControl = Pause - playing;
+//				  HAL_GPIO_TogglePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin);
 				  break;
 			  case 3:
-				  _txTmp[0] = 0x30;
-				  _txTmp[1] = 0x30;
-				  udp_scratch_send(&_txTmp[0], 1);
+				  playbackControl = Next;
 				  break;
 			  case 4:
 				  break;
@@ -230,7 +230,25 @@ void checkRxData() {
 		if (zeroReceived || rxData[0] == 0) {
 			zeroReceived = 1;
 			if (rxData[1] == 0x00) {	// playback controls
-
+				switch (rxData[0]) {
+					case Vol_D:
+						break;
+					case Prev:
+						break;
+					case Play:
+						playing = 1;
+						break;
+					case Pause:
+						playing = 0;
+						break;
+					case Next:
+						break;
+					case Vol_U:
+						break;
+					default:
+						break;
+				}
+//				HAL_GPIO_WritePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin, playing);
 			}
 			else {	// unpack audio data
 				rxIndex = rxData[0] * BUFF_SIZE;
@@ -238,15 +256,6 @@ void checkRxData() {
 				memcpy(&rxBuffer[rxIndex], &rxData[1], BUFF_SIZE * sizeof(uint16_t));
 				if (!playbackStarted && rxIndex == 6 * BUFF_SIZE) {
 					playbackStarted = 1;
-				}
-				// check for missing packets
-				if (rxIndex < BUFF_SIZE) {
-
-				}
-				else {
-					if (rxIndex - BUFF_SIZE == 0x00) {
-
-					}
 				}
 			}
 		}
@@ -304,7 +313,7 @@ int main(void)
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
-	HAL_GPIO_WritePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin, 0);
+	HAL_GPIO_WritePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin, 1);
 	HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin, 0);
 	HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 0);
 	/* USER CODE END 2 */
@@ -317,11 +326,11 @@ int main(void)
 		ethernetif_input(&gnetif);
 		checkButtonPress();
 		checkRxData();
-		uint16_t _tmpIndex = playbackIndex;
-		if (_tmpIndex < rxIndex) {
-			_tmpIndex += BUFF_SIZE * 10;
-		}
-		HAL_GPIO_WritePin(ADC_Switch_GPIO_Port, ADC_Switch_Pin, _tmpIndex - rxIndex > BUFF_SIZE);
+//		uint16_t _tmpIndex = playbackIndex;
+//		if (_tmpIndex < rxIndex) {
+//			_tmpIndex += BUFF_SIZE * 10;
+//		}
+//		HAL_GPIO_WritePin(ADC_Switch_GPIO_Port, ADC_Switch_Pin, _tmpIndex - rxIndex > BUFF_SIZE);
 	/* USER CODE END WHILE */
 
 	/* USER CODE BEGIN 3 */

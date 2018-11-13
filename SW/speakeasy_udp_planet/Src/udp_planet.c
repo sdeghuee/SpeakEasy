@@ -16,9 +16,9 @@
 
 /* USER CODE BEGIN Private variables */
 struct udp_pcb *upcb;
-struct udp_pcb *upcb_send;
 extern uint8_t rxDone;
 extern uint16_t * rxData;
+extern uint16_t playbackControl;
 /* USER CODE END Private variables */
 
 
@@ -33,9 +33,7 @@ void udp_scratch_connect() {
 
 	if (upcb != NULL) {
 		IP4_ADDR(&destIPaddr, DEST_IP_ADDR0, DEST_IP_ADDR1, DEST_IP_ADDR2, DEST_IP_ADDR3);
-//		err = udp_bind(upcb, IP4_ADDR_ANY, UDP_SERVER_PORT);
 		err = udp_connect(upcb, &destIPaddr, UDP_SERVER_PORT);
-//		err = udp_connect(upcb_send, &destIPaddr, UDP_SECOND_PORT);
 		if (err == ERR_OK) {
 			// set receive callback for udp object
 			udp_recv(upcb, udp_receive_callback, NULL);
@@ -76,44 +74,26 @@ void udp_scratch_send(uint16_t * txData, uint16_t count) {
 		// copy txData into pbuf
 		pbuf_take(p, (uint16_t *) txData, length);
 		err = udp_send(upcb, p);
-		HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, err != ERR_OK);
+//		HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, err != ERR_OK);
 		pbuf_free(p);
 	}
 }
-
-/*void udp_scratch_rx_send(uint16_t * txData, uint16_t count) {
-//	udp_scratch_connect();
-
-	struct pbuf *p;
-	uint16_t length = sizeof(txData[0]) * count;
-	p = pbuf_alloc(PBUF_TRANSPORT, length, PBUF_POOL);
-	err_t err;
-	ip_addr_t destIPaddr;
-
-	if (p != NULL) {
-		// copy txData into pbuf
-	    IP4_ADDR(&destIPaddr, DEST_IP_ADDR0, DEST_IP_ADDR1, DEST_IP_ADDR2, DEST_IP_ADDR3);
-		pbuf_take(p, (uint16_t *) txData, length);
-		err = udp_sendto(upcb_send, p, &destIPaddr, UDP_SERVER_PORT);
-		HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, err != ERR_OK);
-		pbuf_free(p);
-	}
-
-//	udp_disconnect(upcb);
-}*/
 
 void udp_receive_callback(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *addr, uint16_t port) {
 	rxData = p->payload;
     rxDone = 1;
 
-    uint16_t sendback[2];
-    err_t err = udp_connect(upcb, addr, port);
-    memcpy(sendback, &rxData[0], 2);
-    sendback[1] = 0x00;	// playback control
-    udp_scratch_send(&sendback[0], 2);
-    udp_disconnect(upcb);
+    if (rxData[1] != NOP) {
+		uint16_t sendback[2];
+		err_t err = udp_connect(upcb, addr, port);
+		memcpy(sendback, &rxData[0], 2);
+		sendback[1] = playbackControl;	// playback control
+		playbackControl = NOP;
+		udp_scratch_send(&sendback[0], 2);
+		udp_disconnect(upcb);
+    }
 
-    HAL_GPIO_TogglePin(LED_Amber_GPIO_Port, LED_Amber_Pin);
+//    HAL_GPIO_TogglePin(LED_Amber_GPIO_Port, LED_Amber_Pin);
 	pbuf_free(p);
 }
 /* USER CODE END Private function definitions */

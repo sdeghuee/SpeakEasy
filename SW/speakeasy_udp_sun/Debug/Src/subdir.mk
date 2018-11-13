@@ -4,6 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Src/audio.c \
 ../Src/ethernetif.c \
 ../Src/lwip.c \
 ../Src/main.c \
@@ -13,6 +14,7 @@ C_SRCS += \
 ../Src/udp_sun.c 
 
 OBJS += \
+./Src/audio.o \
 ./Src/ethernetif.o \
 ./Src/lwip.o \
 ./Src/main.o \
@@ -22,6 +24,7 @@ OBJS += \
 ./Src/udp_sun.o 
 
 C_DEPS += \
+./Src/audio.d \
 ./Src/ethernetif.d \
 ./Src/lwip.d \
 ./Src/main.d \

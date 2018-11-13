@@ -61,6 +61,7 @@ ADC_HandleTypeDef hadc1;
 DAC_HandleTypeDef hdac;
 
 I2C_HandleTypeDef hi2c1;
+I2C_HandleTypeDef hi2c3;
 
 I2S_HandleTypeDef hi2s2;
 DMA_HandleTypeDef hdma_spi2_rx;
@@ -85,8 +86,11 @@ uint8_t buttonPrev[5] = {0, 0, 0, 0, 0};
 // ethernet
 extern struct netif gnetif;
 uint8_t bufferReceived[10];
+uint16_t playbackControlRx = NOP;
+uint16_t playbackControl[2];
 
 // audio
+uint8_t playing = 1;
 uint8_t adcDone = 0;
 uint16_t audioData = 0;
 uint16_t txBuffer[10 * (BUFF_SIZE + 1)];
@@ -94,9 +98,23 @@ uint32_t txIndex = 0;
 uint8_t playbackStarted = 0;
 uint16_t playbackIndex = 0;
 
-uint8_t convCplt = 0;
-uint16_t convCount = 0;
-uint16_t convSum = 0;
+// begin ryan
+double ampFactor = 1;
+uint16_t adcOffset = 2187;
+
+//I2C INIT VARIABLES
+uint8_t i2cAddress = 124;
+uint8_t i2cMinResistance[2] = {0x00,0x00};
+uint8_t i2cDefaultResistance[2] = {0x00, 0x0c};
+uint8_t i2cErr = 0;
+uint16_t minResHoldReq = 75;
+uint16_t maxResHoldReq = 75;
+uint16_t msBetweenToggle = 0;
+uint8_t toggleNum = 0;
+
+//uint8_t convCplt = 0;
+//uint16_t convCount = 0;
+//uint16_t convSum = 0;
 
 /* USER CODE END PV */
 
@@ -112,12 +130,24 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_I2C3_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void debounceButton();
 void checkButtonPress();
 void checkADC();
+void checkPlaybackControl();
+
+// begin ryan
+uint16_t amplify(uint16_t, double);
+void I2C_SetMinResistance();
+void I2C_SetDefaultResistance();
+void Butt_PP();
+void Butt_FF();
+void Butt_RW();
+void Butt_VolUp();
+void Butt_VolDown();
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -150,12 +180,38 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 				HAL_GPIO_WritePin(LED_Amber_GPIO_Port, LED_Amber_Pin, 0);
 			}
 		}
+		if (++msBetweenToggle > 1000) {
+			msBetweenToggle = 1000;
+		}
+		if(toggleNum > 0){
+			switch(toggleNum % 2){
+				case 1:
+					if(msBetweenToggle >= minResHoldReq){
+						I2C_SetDefaultResistance();
+						msBetweenToggle = 0;
+						toggleNum--;
+					}
+					break;
+				case 0:
+					if(msBetweenToggle >= maxResHoldReq){
+						I2C_SetMinResistance();
+						msBetweenToggle = 0;
+						toggleNum--;
+					}
+					break;
+			}
+		}
+//		if(i2cErr&&msCount == 0){
+//			HAL_GPIO_TogglePin(LED_Amber_GPIO_Port,LED_Amber_Pin);
+//			HAL_GPIO_TogglePin(LED_Red_GPIO_Port,LED_Red_Pin);
+//		}
 	}
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc) {
 	HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 0);
 	audioData = HAL_ADC_GetValue(hadc);
+	audioData = amplify(audioData, ampFactor);
 	adcDone = 1;
 //	convSum += HAL_ADC_GetValue(hadc);
 //	convCount++;
@@ -178,7 +234,8 @@ void debounceButton() {
 			buttonCurrent = HAL_GPIO_ReadPin(PB_PlayPause_GPIO_Port, PB_PlayPause_Pin);
 			break;
 		case 3:
-			buttonCurrent = HAL_GPIO_ReadPin(PB_Next_GPIO_Port, PB_Next_Pin);
+			buttonCurrent = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11);
+//			buttonCurrent = HAL_GPIO_ReadPin(PB_Next_GPIO_Port, PB_Next_Pin);
 			break;
 		case 4:
 			buttonCurrent = HAL_GPIO_ReadPin(PB_VolU_GPIO_Port, PB_VolU_Pin);
@@ -196,21 +253,35 @@ void checkButtonPress() {
 	  if (buttonPress[i]) {
 		  switch (i) {
 			  case 0:
+				  Butt_VolDown();
 				  break;
 			  case 1:
+				  if (!toggleNum) {
+					  Butt_RW();
+				  }
 				  break;
 			  case 2:	//Play Pause
-				  HAL_GPIO_TogglePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin);
+				  if (!toggleNum) {
+					  Butt_PP();
+				  }
+				  playing ^= 1;
+				  playbackControl[0] = Pause - playing;
+				  udp_scratch_send(&playbackControl[0], 2);
 				  break;
 			  case 3:
+				  buttonPress[3] = 0;
+				  if (!toggleNum) {
+					  Butt_FF();
+				  }
 				  break;
 			  case 4:
+				  Butt_VolUp();
 				  break;
 			  default:
 				  break;
 		  }
-		  buttonPress[i] = 0;
 	  }
+	  buttonPress[i] = 0;
 	}
 }
 
@@ -220,7 +291,7 @@ void checkADC() {
 		txBuffer[txIndex++] = audioData;
 		if (txIndex % BUFF_SIZE == 0) {
 			bufferReceived[(txIndex - 1) / BUFF_SIZE] = 0;
-			udp_scratch_send(&txBuffer[txIndex - BUFF_SIZE], BUFF_SIZE, (txIndex - 1) / BUFF_SIZE);
+			udp_scratch_send_audio(&txBuffer[txIndex - BUFF_SIZE], BUFF_SIZE, (txIndex - 1) / BUFF_SIZE);
 			if (!playbackStarted && txIndex == 6 * BUFF_SIZE) {
 				playbackStarted = 1;
 			}
@@ -229,6 +300,68 @@ void checkADC() {
 			}
 		}
 	}
+}
+
+void checkPlaybackControl() {
+	if (playbackControlRx != NOP) {
+		switch (playbackControlRx) {
+			case Vol_D:
+				Butt_VolDown();
+				break;
+			case Prev:
+				Butt_RW();
+				break;
+			case Play:
+				Butt_PP();
+				playing = 1;
+				break;
+			case Pause:
+				Butt_PP();
+				playing = 0;
+				break;
+			case Next:
+				Butt_FF();
+				break;
+			case Vol_U:
+				Butt_VolUp();
+				break;
+		}
+		playbackControlRx = NOP;
+//		HAL_GPIO_WritePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin, playing);
+	}
+}
+
+uint16_t amplify(uint16_t in, double factor){
+	double out=adcOffset;
+	if(in > adcOffset){
+		out+=(in-adcOffset)*factor;
+	}else{
+		out-=(adcOffset-in)*factor;
+	}
+	return (uint16_t) out;
+}
+void I2C_SetMinResistance(){
+	HAL_I2C_Master_Transmit(&hi2c3,i2cAddress,i2cMinResistance,2,10);
+}
+void I2C_SetDefaultResistance(){
+	HAL_I2C_Master_Transmit(&hi2c3,i2cAddress,i2cDefaultResistance,2,10);
+}
+void Butt_PP(){
+	toggleNum = 2;
+}
+void Butt_FF(){
+	toggleNum = 4;
+}
+void Butt_RW(){
+	toggleNum = 6;
+}
+void Butt_VolUp(){
+	if(ampFactor < 1.5)
+		ampFactor+=.1;
+}
+void Butt_VolDown(){
+	if(ampFactor > .5)
+		ampFactor-=.1;
 }
 /* USER CODE END 0 */
 
@@ -239,68 +372,71 @@ void checkADC() {
   */
 int main(void)
 {
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration----------------------------------------------------------*/
+  /* MCU Configuration----------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_DMA_Init();
-	MX_LWIP_Init();
-	MX_DAC_Init();
-	MX_ADC1_Init();
-	MX_I2C1_Init();
-	MX_I2S2_Init();
-	MX_USART2_UART_Init();
-	MX_TIM2_Init();
-	MX_TIM3_Init();
-	MX_TIM4_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_LWIP_Init();
+  MX_DAC_Init();
+  MX_ADC1_Init();
+  MX_I2C1_Init();
+  MX_I2S2_Init();
+  MX_USART2_UART_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
+  MX_I2C3_Init();
+  /* USER CODE BEGIN 2 */
 	err_t errout = ethernetif_init(&gnetif);
 	HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, errout != ERR_OK);
 	HAL_GPIO_WritePin(LED_Amber_GPIO_Port, LED_Amber_Pin, netif_is_up(&gnetif));
 	udp_scratch_connect();
-//	udp_receive_init();
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
-	/* USER CODE END 2 */
+	I2C_SetDefaultResistance();
+	playbackControl[1] = NOP;
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1)
 	{
 		ethernetif_set_link(&gnetif);
 		ethernetif_input(&gnetif);
 		checkButtonPress();
 		checkADC();
+		checkPlaybackControl();
 //		if (convCplt) {
 //			convCplt = 0;
 //			HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 1);
 //			HAL_ADC_Start_IT(&hadc1);
 //		}
-	/* USER CODE END WHILE */
+  /* USER CODE END WHILE */
 
-	/* USER CODE BEGIN 3 */
+  /* USER CODE BEGIN 3 */
 
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 
 }
 
@@ -453,6 +589,26 @@ static void MX_I2C1_Init(void)
 
 }
 
+/* I2C3 init function */
+static void MX_I2C3_Init(void)
+{
+
+  hi2c3.Instance = I2C3;
+  hi2c3.Init.ClockSpeed = 100000;
+  hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c3.Init.OwnAddress1 = 0;
+  hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c3.Init.OwnAddress2 = 0;
+  hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c3) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* I2S2 init function */
 static void MX_I2S2_Init(void)
 {
@@ -545,7 +701,7 @@ static void MX_TIM4_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 2618;
+  htim4.Init.Prescaler = 1309;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -644,8 +800,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(MII_INT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB_PlayPause_Pin PHY_RX_ERR_Pin */
-  GPIO_InitStruct.Pin = PB_PlayPause_Pin|PHY_RX_ERR_Pin;
+  /*Configure GPIO pins : PB_PlayPause_Pin PD15 PHY_RX_ERR_Pin */
+  GPIO_InitStruct.Pin = PB_PlayPause_Pin|GPIO_PIN_15|PHY_RX_ERR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
@@ -657,8 +813,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB_VolD_Pin PB_VolU_Pin PB_Next_Pin */
-  GPIO_InitStruct.Pin = PB_VolD_Pin|PB_VolU_Pin|PB_Next_Pin;
+  /*Configure GPIO pins : PB_VolD_Pin PC7 PC8 */
+  GPIO_InitStruct.Pin = PB_VolD_Pin|GPIO_PIN_7|GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PA9 PB_VolU_Pin PB_Next_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_9|PB_VolU_Pin|PB_Next_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
