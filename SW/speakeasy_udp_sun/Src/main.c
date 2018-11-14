@@ -233,8 +233,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 			{
 				if(micindex < WR_BUFFER_SIZE/2){
 					datacMic = WrBuffer[micindex*2];
+//					HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port,AMP_Gain0_Pin,1);
 				}else{
 					AUDIODataReady = 0;
+//					HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin,0);
 //					HAL_GPIO_TogglePin(LED_Red_GPIO_Port,LED_Red_Pin);
 					micindex = 0;
 				}
@@ -242,9 +244,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 				restart = 0;
 				if(micindex+AUDIOBuffOffset < WR_BUFFER_SIZE){
 					datacMic = WrBuffer[micindex*2+AUDIOBuffOffset];
+					datacMic = WrBuffer[micindex*2];
 				}else{
 					AUDIODataReady = 0;
 					micindex = 0;
+//					HAL_GPIO_TogglePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin);
 //					HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_12);
 				}
 			}
@@ -556,6 +560,7 @@ int main(void)
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 	BSP_AUDIO_IN_Init(DEFAULT_AUDIO_IN_FREQ,DEFAULT_AUDIO_IN_BIT_RESOLUTION,DEFAULT_AUDIO_IN_CHANNEL_NBR);
 	BSP_AUDIO_IN_Record(hi2s2,(uint16_t*)&InternalBuffer[0], INTERNAL_BUFF_SIZE);
+	HAL_Delay(3000);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_Base_Start_IT(&htim4);
@@ -745,7 +750,6 @@ static void MX_I2S2_Init(void)
   hi2s2.Init.DataFormat = I2S_DATAFORMAT_16B;
   hi2s2.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
   hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_16K;
-//  hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_32K;
   hi2s2.Init.CPOL = I2S_CPOL_HIGH;
   hi2s2.Init.ClockSource = I2S_CLOCK_PLL;
   hi2s2.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
@@ -829,7 +833,6 @@ static void MX_TIM4_Init(void)
 
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 1309*2;
-//  htim4.Init.Prescaler = 1309;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
