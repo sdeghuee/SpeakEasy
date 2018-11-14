@@ -73,7 +73,7 @@ void udp_scratch_send(uint16_t * txData, uint16_t count) {
 		// copy txData into pbuf
 		pbuf_take(p, (uint16_t *) txData, length);
 		err = udp_send(upcb, p);
-		HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, err != ERR_OK);
+//		HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, err != ERR_OK);
 		pbuf_free(p);
 	}
 }
@@ -92,7 +92,7 @@ void udp_scratch_send_audio(uint16_t * txData, uint16_t count, uint16_t index) {
 		memcpy(&indexedData[1], txData, BUFF_SIZE * sizeof(txData[0]));
 		pbuf_take(p, (uint16_t *) indexedData, length);
 		err = udp_send(upcb, p);
-		HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, err != ERR_OK);
+//		HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, err != ERR_OK);
 		pbuf_free(p);
 	}
 }

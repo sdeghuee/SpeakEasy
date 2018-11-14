@@ -53,6 +53,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "udp_sun.h"
+#include "audio.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -61,7 +62,6 @@ ADC_HandleTypeDef hadc1;
 DAC_HandleTypeDef hdac;
 
 I2C_HandleTypeDef hi2c1;
-I2C_HandleTypeDef hi2c3;
 
 I2S_HandleTypeDef hi2s2;
 DMA_HandleTypeDef hdma_spi2_rx;
@@ -112,6 +112,28 @@ uint16_t maxResHoldReq = 75;
 uint16_t msBetweenToggle = 0;
 uint8_t toggleNum = 0;
 
+//MICROPHONE INIT VARIABLES
+uint16_t datacMic;
+const int BUFFER_OFFSET_NONE = 0;
+typedef struct {
+  int32_t offset;
+  uint32_t fptr;
+}Audio_BufferTypeDef;
+uint8_t pHeaderBuff[44];
+uint16_t WrBuffer[WR_BUFFER_SIZE];
+
+__IO uint32_t AUDIODataReady = 0, AUDIOBuffOffset = 0;
+static uint16_t RecBuf[PCM_OUT_SIZE];/* PCM stereo samples are saved in RecBuf */
+static uint16_t InternalBuffer[INTERNAL_BUFF_SIZE];
+__IO uint32_t ITCounter = 0;
+int micindex = 0, restart = 0, micOffset = 2048;
+Audio_BufferTypeDef  BufferCtl;
+
+//NOISE DETECTION INIT VARIABLES
+uint8_t noiseLevel = 0;
+
+uint8_t tmpToggle = 0;
+
 //uint8_t convCplt = 0;
 //uint16_t convCount = 0;
 //uint16_t convSum = 0;
@@ -130,7 +152,6 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
-static void MX_I2C3_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -148,19 +169,18 @@ void Butt_FF();
 void Butt_RW();
 void Butt_VolUp();
 void Butt_VolDown();
+void setGain(uint8_t);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 	if (htim->Instance == TIM2) {
-		HAL_GPIO_TogglePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin);
 		if (playbackStarted) {
-			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, txBuffer[playbackIndex++]);
+//			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, txBuffer[playbackIndex++]);
 			if (playbackIndex == 10 * BUFF_SIZE) {
 				playbackIndex = 0;
 			}
 		}
-		HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 1);
 		HAL_ADC_Start_IT(&hadc1);
 //		if (started) {
 //			audioData = convSum / convCount;
@@ -179,6 +199,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 				HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, 0);
 				HAL_GPIO_WritePin(LED_Amber_GPIO_Port, LED_Amber_Pin, 0);
 			}
+			setGain(noiseLevel);
 		}
 		if (++msBetweenToggle > 1000) {
 			msBetweenToggle = 1000;
@@ -205,6 +226,40 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 //			HAL_GPIO_TogglePin(LED_Amber_GPIO_Port,LED_Amber_Pin);
 //			HAL_GPIO_TogglePin(LED_Red_GPIO_Port,LED_Red_Pin);
 //		}
+	}
+	else if (htim->Instance == TIM4){
+		if(AUDIODataReady){
+			if(AUDIOBuffOffset == 0 )
+			{
+				if(micindex < WR_BUFFER_SIZE/2){
+					datacMic = WrBuffer[micindex*2];
+				}else{
+					AUDIODataReady = 0;
+//					HAL_GPIO_TogglePin(LED_Red_GPIO_Port,LED_Red_Pin);
+					micindex = 0;
+				}
+			}else{
+				restart = 0;
+				if(micindex+AUDIOBuffOffset < WR_BUFFER_SIZE){
+					datacMic = WrBuffer[micindex*2+AUDIOBuffOffset];
+				}else{
+					AUDIODataReady = 0;
+					micindex = 0;
+//					HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_12);
+				}
+			}
+		}
+		if(AUDIODataReady){
+			datacMic &= 0b1111111111110000;
+			datacMic = datacMic>>4;
+			if(datacMic > micOffset)
+				datacMic-=micOffset;
+			else if(datacMic<micOffset)
+				datacMic += micOffset;
+			micindex++;
+			noiseLevel = audioProcess(audioData, datacMic, micOffset, adcOffset);
+			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,datacMic);
+		}
 	}
 }
 
@@ -234,8 +289,7 @@ void debounceButton() {
 			buttonCurrent = HAL_GPIO_ReadPin(PB_PlayPause_GPIO_Port, PB_PlayPause_Pin);
 			break;
 		case 3:
-			buttonCurrent = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11);
-//			buttonCurrent = HAL_GPIO_ReadPin(PB_Next_GPIO_Port, PB_Next_Pin);
+			buttonCurrent = HAL_GPIO_ReadPin(PB_Next_GPIO_Port, PB_Next_Pin);
 			break;
 		case 4:
 			buttonCurrent = HAL_GPIO_ReadPin(PB_VolU_GPIO_Port, PB_VolU_Pin);
@@ -269,7 +323,6 @@ void checkButtonPress() {
 				  udp_scratch_send(&playbackControl[0], 2);
 				  break;
 			  case 3:
-				  buttonPress[3] = 0;
 				  if (!toggleNum) {
 					  Butt_FF();
 				  }
@@ -341,10 +394,10 @@ uint16_t amplify(uint16_t in, double factor){
 	return (uint16_t) out;
 }
 void I2C_SetMinResistance(){
-	HAL_I2C_Master_Transmit(&hi2c3,i2cAddress,i2cMinResistance,2,10);
+	HAL_I2C_Master_Transmit(&hi2c1,i2cAddress,i2cMinResistance,2,10);
 }
 void I2C_SetDefaultResistance(){
-	HAL_I2C_Master_Transmit(&hi2c3,i2cAddress,i2cDefaultResistance,2,10);
+	HAL_I2C_Master_Transmit(&hi2c1,i2cAddress,i2cDefaultResistance,2,10);
 }
 void Butt_PP(){
 	toggleNum = 2;
@@ -362,6 +415,97 @@ void Butt_VolUp(){
 void Butt_VolDown(){
 	if(ampFactor > .5)
 		ampFactor-=.1;
+}
+void setGain(uint8_t level){
+	  switch(level){
+	  case 0:
+		  playbackControl[0] = Gain0;
+		  udp_scratch_send(&playbackControl[0], 2);
+		  HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin,0);
+		  HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin,0);
+		  break;
+	  case 1:
+		  playbackControl[0] = Gain1;
+		  udp_scratch_send(&playbackControl[0], 2);
+		  HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin,0);
+		  HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin,1);
+		  break;
+	  case 2:
+		  playbackControl[0] = Gain2;
+		  udp_scratch_send(&playbackControl[0], 2);
+		  HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin,1);
+		  HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin,0);
+		  break;
+	  case 3:
+		  playbackControl[0] = Gain3;
+		  udp_scratch_send(&playbackControl[0], 2);
+		  HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin,1);
+		  HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin,1);
+		  break;
+	  }
+}
+void BSP_AUDIO_IN_HalfTransfer_CallBack(void)
+{
+  /* PDM to PCM data convert */
+  BSP_AUDIO_IN_PDMToPCM((uint16_t*)&InternalBuffer[0], (uint16_t*)&RecBuf[0]);
+
+  /* Copy PCM data in internal buffer */
+  memcpy((uint16_t*)&WrBuffer[ITCounter * (PCM_OUT_SIZE*2)], RecBuf, PCM_OUT_SIZE*4);
+
+  BufferCtl.offset = BUFFER_OFFSET_NONE;
+
+  if(ITCounter == (WR_BUFFER_SIZE/(PCM_OUT_SIZE*4))-1)
+  {
+    AUDIODataReady = 1;
+    AUDIOBuffOffset = 0;
+    ITCounter++;
+  }
+  else if(ITCounter == (WR_BUFFER_SIZE/(PCM_OUT_SIZE*2))-1)
+  {
+    AUDIODataReady = 1;
+    AUDIOBuffOffset = WR_BUFFER_SIZE/2;
+    ITCounter = 0;
+    if(micindex != 0){
+    	HAL_GPIO_WritePin(GPIOD,GPIO_PIN_13,1);
+    }
+    restart = 1;
+  }
+  else
+  {
+    ITCounter++;
+  }
+}
+void BSP_AUDIO_IN_TransferComplete_CallBack(void)
+{
+  /* PDM to PCM data convert */
+  BSP_AUDIO_IN_PDMToPCM((uint16_t*)&InternalBuffer[INTERNAL_BUFF_SIZE/2], (uint16_t*)&RecBuf[0]);
+
+  /* Copy PCM data in internal buffer */
+  memcpy((uint16_t*)&WrBuffer[ITCounter * (PCM_OUT_SIZE*2)], RecBuf, PCM_OUT_SIZE*4);
+
+  BufferCtl.offset = BUFFER_OFFSET_NONE;
+
+  if(ITCounter == (WR_BUFFER_SIZE/(PCM_OUT_SIZE*4))-1)
+  {
+    AUDIODataReady = 1;
+    AUDIOBuffOffset = 0;
+    ITCounter++;
+
+  }
+  else if(ITCounter == (WR_BUFFER_SIZE/(PCM_OUT_SIZE*2))-1)
+  {
+    AUDIODataReady = 1;
+    AUDIOBuffOffset = WR_BUFFER_SIZE/2;
+    ITCounter = 0;
+    restart = 1;
+    if(micindex != 0){
+    	HAL_GPIO_WritePin(GPIOD,GPIO_PIN_13,1);
+    }
+  }
+  else
+  {
+    ITCounter++;
+  }
 }
 /* USER CODE END 0 */
 
@@ -404,15 +548,17 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
-  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
 	err_t errout = ethernetif_init(&gnetif);
 	HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, errout != ERR_OK);
 	HAL_GPIO_WritePin(LED_Amber_GPIO_Port, LED_Amber_Pin, netif_is_up(&gnetif));
 	udp_scratch_connect();
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
+	BSP_AUDIO_IN_Init(DEFAULT_AUDIO_IN_FREQ,DEFAULT_AUDIO_IN_BIT_RESOLUTION,DEFAULT_AUDIO_IN_CHANNEL_NBR);
+	BSP_AUDIO_IN_Record(hi2s2,(uint16_t*)&InternalBuffer[0], INTERNAL_BUFF_SIZE);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
+	HAL_TIM_Base_Start_IT(&htim4);
 	I2C_SetDefaultResistance();
 	playbackControl[1] = NOP;
   /* USER CODE END 2 */
@@ -589,26 +735,6 @@ static void MX_I2C1_Init(void)
 
 }
 
-/* I2C3 init function */
-static void MX_I2C3_Init(void)
-{
-
-  hi2c3.Instance = I2C3;
-  hi2c3.Init.ClockSpeed = 100000;
-  hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c3.Init.OwnAddress1 = 0;
-  hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c3.Init.OwnAddress2 = 0;
-  hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c3) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-}
-
 /* I2S2 init function */
 static void MX_I2S2_Init(void)
 {
@@ -618,7 +744,8 @@ static void MX_I2S2_Init(void)
   hi2s2.Init.Standard = I2S_STANDARD_MSB;
   hi2s2.Init.DataFormat = I2S_DATAFORMAT_16B;
   hi2s2.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
-  hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_32K;
+  hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_16K;
+//  hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_32K;
   hi2s2.Init.CPOL = I2S_CPOL_HIGH;
   hi2s2.Init.ClockSource = I2S_CLOCK_PLL;
   hi2s2.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
@@ -701,7 +828,8 @@ static void MX_TIM4_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 1309;
+  htim4.Init.Prescaler = 1309*2;
+//  htim4.Init.Prescaler = 1309;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -813,14 +941,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB_VolD_Pin PC7 PC8 */
-  GPIO_InitStruct.Pin = PB_VolD_Pin|GPIO_PIN_7|GPIO_PIN_8;
+  /*Configure GPIO pins : PC7 PC8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA9 PB_VolU_Pin PB_Next_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_9|PB_VolU_Pin|PB_Next_Pin;
+  /*Configure GPIO pins : PB_VolD_Pin PA9 PB_VolU_Pin PB_Next_Pin */
+  GPIO_InitStruct.Pin = PB_VolD_Pin|GPIO_PIN_9|PB_VolU_Pin|PB_Next_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);

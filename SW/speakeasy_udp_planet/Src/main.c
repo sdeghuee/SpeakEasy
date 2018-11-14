@@ -57,7 +57,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-ADC_HandleTypeDef hadc2;
+DMA_HandleTypeDef hdma_adc1;
 
 DAC_HandleTypeDef hdac;
 
@@ -98,7 +98,16 @@ uint16_t * rxData;
 uint16_t rxBuffer[10 * BUFF_SIZE];
 uint16_t rxIndex = 0;
 uint16_t playbackIndex = 0;
+uint16_t muteCount = 0;
+uint16_t muteTrue = 1;
 
+// begin ryan
+// lights
+int convertLow = 0;
+int redOffset = 450;
+int greenOffset = 800;
+int blueOffset = 300;
+uint16_t adcData[2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -114,7 +123,6 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_ADC1_Init(void);
-static void MX_ADC2_Init(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
@@ -124,6 +132,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void debounceButton();
 void checkButtonPress();
 void checkRxData();
+void updatePWM();
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -137,28 +146,42 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim) {
 			if (bufferReceived[checkIndex - 6] && playbackStarted) {
 				// DAC output
 				if (rxBuffer[playbackIndex] > 500) {	// fix this or check it's still needed, maybe remove reset
+					if (rxBuffer[playbackIndex] > 2100) {
+						muteTrue = 0;
+					}
 					HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, rxBuffer[playbackIndex++]);
 				}
 				else {
 					playbackIndex++;
 				}
-			}
-			uint16_t resetIndex = playbackIndex;
-			if (resetIndex < 2) {
-				resetIndex += 10*BUFF_SIZE;
-			}
-			rxBuffer[resetIndex - 2] = 0x00;
-			if (playbackIndex % BUFF_SIZE == 0) {
-				// playback done with packet, so mark as not received
-				bufferReceived[(playbackIndex - 1) / BUFF_SIZE]	= 0;
-			}
-			if (playbackIndex == 10 * BUFF_SIZE) {
-				playbackIndex = 0;
+				uint16_t resetIndex = playbackIndex;
+				if (resetIndex < 2) {
+					resetIndex += 10*BUFF_SIZE;
+				}
+				rxBuffer[resetIndex - 2] = 0x00;
+				if (playbackIndex % BUFF_SIZE == 0) {
+					// playback done with packet, so mark as not received
+					bufferReceived[(playbackIndex - 1) / BUFF_SIZE]	= 0;
+					if (muteTrue) {
+						muteCount++;
+					}
+					else {
+						muteCount = 0;
+					}
+					muteTrue = 1;
+					HAL_GPIO_WritePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin, muteCount < 5);
+				}
+				if (playbackIndex == 10 * BUFF_SIZE) {
+					playbackIndex = 0;
+				}
 			}
 		}
 	}
 	else if (htim->Instance == TIM3) {
 		debounceButton();
+		if (msCount % 50 == 0) {
+			updatePWM();
+		}
 		if (++msCount == 1000) {
 			msCount = 0;
 			if (!started) {
@@ -202,6 +225,7 @@ void checkButtonPress() {
 	  if (buttonPress[i]) {
 		  switch (i) {
 			  case 0:
+				  playbackControl = Vol_D;
 				  break;
 			  case 1:
 				  playbackControl = Prev;
@@ -215,6 +239,7 @@ void checkButtonPress() {
 				  playbackControl = Next;
 				  break;
 			  case 4:
+				  playbackControl = Vol_U;
 				  break;
 			  default:
 				  break;
@@ -229,7 +254,7 @@ void checkRxData() {
 		rxDone = 0;
 		if (zeroReceived || rxData[0] == 0) {
 			zeroReceived = 1;
-			if (rxData[1] == 0x00) {	// playback controls
+			if (rxData[1] == NOP) {	// playback controls
 				switch (rxData[0]) {
 					case Vol_D:
 						break;
@@ -244,6 +269,30 @@ void checkRxData() {
 					case Next:
 						break;
 					case Vol_U:
+						break;
+					case Gain0:
+						HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin, 0);
+						HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 0);
+						HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin, 0);
+						HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin, 0);
+						break;
+					case Gain1:
+						HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin, 1);
+						HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 0);
+						HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin, 1);
+						HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin, 0);
+						break;
+					case Gain2:
+						HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin, 0);
+						HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 1);
+						HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin, 0);
+						HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin, 1);
+						break;
+					case Gain3:
+						HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin, 1);
+						HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 1);
+						HAL_GPIO_WritePin(LED_Amber_GPIO_Port,LED_Amber_Pin, 1);
+						HAL_GPIO_WritePin(LED_Red_GPIO_Port,LED_Red_Pin, 1);
 						break;
 					default:
 						break;
@@ -261,6 +310,36 @@ void checkRxData() {
 		}
 	}
 }
+
+void updatePWM(){
+    int dataRed = adcData[1];
+    int dataGreenBlue = adcData[0];
+    if(convertLow){
+        if(dataGreenBlue < blueOffset){
+            dataGreenBlue = 0;
+        }else dataGreenBlue -= blueOffset;
+
+        dataGreenBlue /= 20;
+    }else{
+        if(dataGreenBlue < greenOffset){
+            dataGreenBlue = 0;
+        }else dataGreenBlue -= greenOffset;
+        dataGreenBlue /= 10;
+    }
+    if(dataRed < redOffset){
+        dataRed = 0;
+    }else dataRed -= redOffset;
+    dataRed/=30;
+    __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,dataRed);
+    if(convertLow){
+        HAL_GPIO_WritePin(ADC_Switch_GPIO_Port,ADC_Switch_Pin,1);
+        __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,dataGreenBlue);
+    }else{
+        HAL_GPIO_WritePin(ADC_Switch_GPIO_Port,ADC_Switch_Pin,0);
+        __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,dataGreenBlue);
+    }
+    convertLow = !convertLow;
+}
 /* USER CODE END 0 */
 
 /**
@@ -270,56 +349,59 @@ void checkRxData() {
   */
 int main(void)
 {
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration----------------------------------------------------------*/
+  /* MCU Configuration----------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_DMA_Init();
-	MX_LWIP_Init();
-	MX_DAC_Init();
-	MX_I2C1_Init();
-	MX_I2S2_Init();
-	MX_TIM1_Init();
-	MX_USART2_UART_Init();
-	MX_TIM2_Init();
-	MX_TIM3_Init();
-	MX_TIM4_Init();
-	MX_ADC1_Init();
-	MX_ADC2_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_LWIP_Init();
+  MX_DAC_Init();
+  MX_I2C1_Init();
+  MX_I2S2_Init();
+  MX_TIM1_Init();
+  MX_USART2_UART_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
+  MX_ADC1_Init();
+  /* USER CODE BEGIN 2 */
 	err_t errout = ethernetif_init(&gnetif);
 	HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, errout != ERR_OK);
 	HAL_GPIO_WritePin(LED_Amber_GPIO_Port, LED_Amber_Pin, netif_is_up(&gnetif));
 	udp_receive_init();
 //	udp_scratch_connect();
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_GPIO_WritePin(AMP_Mute_GPIO_Port, AMP_Mute_Pin, 1);
 	HAL_GPIO_WritePin(AMP_Gain0_GPIO_Port, AMP_Gain0_Pin, 0);
 	HAL_GPIO_WritePin(AMP_Gain1_GPIO_Port, AMP_Gain1_Pin, 0);
-	/* USER CODE END 2 */
+	HAL_ADC_Start_DMA(&hadc1, adcData, 2);
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1)
 	{
 		ethernetif_set_link(&gnetif);
@@ -331,12 +413,12 @@ int main(void)
 //			_tmpIndex += BUFF_SIZE * 10;
 //		}
 //		HAL_GPIO_WritePin(ADC_Switch_GPIO_Port, ADC_Switch_Pin, _tmpIndex - rxIndex > BUFF_SIZE);
-	/* USER CODE END WHILE */
+  /* USER CODE END WHILE */
 
-	/* USER CODE BEGIN 3 */
+  /* USER CODE BEGIN 3 */
 
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 
 }
 
@@ -418,14 +500,14 @@ static void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.ScanConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.NbrOfConversion = 2;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
@@ -436,35 +518,8 @@ static void MX_ADC1_Init(void)
     */
   sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-}
-
-/* ADC2 init function */
-static void MX_ADC2_Init(void)
-{
-
-  ADC_ChannelConfTypeDef sConfig;
-
-    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-    */
-  hadc2.Instance = ADC2;
-  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc2.Init.ScanConvMode = DISABLE;
-  hadc2.Init.ContinuousConvMode = DISABLE;
-  hadc2.Init.DiscontinuousConvMode = DISABLE;
-  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc2.Init.NbrOfConversion = 1;
-  hadc2.Init.DMAContinuousRequests = DISABLE;
-  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  if (HAL_ADC_Init(&hadc2) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -472,9 +527,8 @@ static void MX_ADC2_Init(void)
     /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
     */
   sConfig.Channel = ADC_CHANNEL_10;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -556,9 +610,9 @@ static void MX_TIM1_Init(void)
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
 
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
+  htim1.Init.Prescaler = 2500;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 0;
+  htim1.Init.Period = 100;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
@@ -630,8 +684,8 @@ static void MX_TIM2_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 955;
-//  htim2.Init.Prescaler = 953;
+  htim2.Init.Prescaler = 956;
+//  htim2.Init.Prescaler = 950;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -745,11 +799,15 @@ static void MX_DMA_Init(void)
 {
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
+  __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
 

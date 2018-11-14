@@ -73,7 +73,9 @@ Src/main.o: ../Src/main.c \
  /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Middlewares/Third_Party/LwIP/src/include/lwip/ip6.h \
  /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Middlewares/Third_Party/LwIP/src/include/lwip/prot/ip.h \
  /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Middlewares/Third_Party/LwIP/src/include/lwip/prot/udp.h \
- /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Middlewares/Third_Party/LwIP/src/include/lwip/tcp.h
+ /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Middlewares/Third_Party/LwIP/src/include/lwip/tcp.h \
+ /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Inc/audio.h \
+ /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Inc/pdm2pcm_glo.h
 
 /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Inc/main.h:
 
@@ -224,3 +226,7 @@ Src/main.o: ../Src/main.c \
 /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Middlewares/Third_Party/LwIP/src/include/lwip/prot/udp.h:
 
 /home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Middlewares/Third_Party/LwIP/src/include/lwip/tcp.h:
+
+/home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Inc/audio.h:
+
+/home/david/Documents/eclipse-workspace/speakeasy_udp_sun/Inc/pdm2pcm_glo.h:

@@ -150,7 +150,7 @@
 #define UDP_SERVER_PORT    (uint16_t) 1234   /* define the UDP local connection port */
 #define UDP_CLIENT_PORT    (uint16_t) 1234   /* define the UDP remote connection port */
 
-enum controls {Vol_D, Prev, Play, Pause, Next, Vol_U, NOP};
+enum controls {Vol_D, Prev, Play, Pause, Next, Vol_U, Gain0, Gain1, Gain2, Gain3, NOP};
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

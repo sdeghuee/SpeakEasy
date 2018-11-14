@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS :=
+LIBS := -l:libPDMFilter_CM4_GCC.a
 

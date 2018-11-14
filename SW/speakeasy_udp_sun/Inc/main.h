@@ -111,8 +111,8 @@
 #define LED_Red_GPIO_Port GPIOD
 #define LED_Amber_Pin GPIO_PIN_13
 #define LED_Amber_GPIO_Port GPIOD
-#define PB_VolD_Pin GPIO_PIN_6
-#define PB_VolD_GPIO_Port GPIOC
+#define PB_VolD_Pin GPIO_PIN_8
+#define PB_VolD_GPIO_Port GPIOA
 #define PB_VolU_Pin GPIO_PIN_10
 #define PB_VolU_GPIO_Port GPIOA
 #define PB_Next_Pin GPIO_PIN_11
@@ -142,7 +142,7 @@
 #define UDP_SERVER_PORT    (uint16_t) 1234   /* define the UDP local connection port */
 #define UDP_CLIENT_PORT    (uint16_t) 1234   /* define the UDP remote connection port */
 
-enum controls {Vol_D, Prev, Play, Pause, Next, Vol_U, NOP};
+enum controls {Vol_D, Prev, Play, Pause, Next, Vol_U, Gain0, Gain1, Gain2, Gain3, NOP};
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

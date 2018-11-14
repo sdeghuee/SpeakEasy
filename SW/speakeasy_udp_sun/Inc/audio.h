@@ -154,8 +154,9 @@
 #define AUDIO_TIMEOUT                   2
 
 /* AudioFreq * DataSize (2 bytes) * NumChannels (Stereo: 2) */
-#define WR_BUFFER_SIZE          			  4096
-#define DEFAULT_AUDIO_IN_FREQ                 I2S_AUDIOFREQ_16K
+#define WR_BUFFER_SIZE          			  4096/2
+#define DEFAULT_AUDIO_IN_FREQ                 I2S_AUDIOFREQ_8K
+//#define DEFAULT_AUDIO_IN_FREQ                 I2S_AUDIOFREQ_16K
 #define DEFAULT_AUDIO_IN_BIT_RESOLUTION       16
 #define DEFAULT_AUDIO_IN_CHANNEL_NBR          1 /* Mono = 1, Stereo = 2 */
 #define DEFAULT_AUDIO_IN_VOLUME               64
@@ -172,9 +173,10 @@
 #define DATACONSTANT 1000
 #define HIGHSENSITIVITY 25
 #define LOWSENSITIVITY -50
-#define BASETHRESHOLD 300
+#define BASETHRESHOLD 500
 #define THRESHOLDINCREMENT .5
 #define THRESHOLDMULTIPLIER 1.0
+#define DACDIVIDER 2
 /**
   * @}
   */

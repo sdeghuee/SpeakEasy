@@ -523,7 +523,7 @@ static void PDMDecoder_Init(uint32_t AudioFreq, uint32_t ChnlNbrIn, uint32_t Chn
 //  if ((freqindex & 0x7) == 0)
 //  {
 //    /* I2S clock config
-//    PLLI2S_VCO = f(VCO clock) = f(PLLI2S clock input) × (PLLI2SN/PLLM)
+//    PLLI2S_VCO = f(VCO clock) = f(PLLI2S clock input) ï¿½ (PLLI2SN/PLLM)
 //    I2SCLK = f(PLLI2S clock output) = f(VCO clock) / PLLI2SR */
 //    rccclkinit.PeriphClockSelection = RCC_PERIPHCLK_I2S;
 //    rccclkinit.PLLI2S.PLLI2SN = I2SPLLN[freqindex];
@@ -533,7 +533,7 @@ static void PDMDecoder_Init(uint32_t AudioFreq, uint32_t ChnlNbrIn, uint32_t Chn
 //  else
 //  {
 //    /* I2S clock config
-//    PLLI2S_VCO = f(VCO clock) = f(PLLI2S clock input) × (PLLI2SN/PLLM)
+//    PLLI2S_VCO = f(VCO clock) = f(PLLI2S clock input) ï¿½ (PLLI2SN/PLLM)
 //    I2SCLK = f(PLLI2S clock output) = f(VCO clock) / PLLI2SR */
 //    rccclkinit.PeriphClockSelection = RCC_PERIPHCLK_I2S;
 //    rccclkinit.PLLI2S.PLLI2SN = 258;
@@ -1072,13 +1072,13 @@ uint8_t audioProcess(int dataADC, int datacMic, int micOffset, int adcOffset){
 //		  itoa(micAverage, micDisplayResult, 10);
 //		  itoa(dacAverage, dacDisplayResult,10);
 
-		  if(micAverage>=BASETHRESHOLD*thresholdMultiplier+dacAverage/10){ //this is where we'll want to add in the DAC info as a multiplier
+		  if(micAverage>=BASETHRESHOLD*thresholdMultiplier+dacAverage/DACDIVIDER){ //this is where we'll want to add in the DAC info as a multiplier
 //			  thresholdHighCounter++;
 //			  thresholdLowCounter = 0;
 			  if(thresholdCounter < 100)
 			  thresholdCounter++;
 		  }
-		  else if(micAverage<BASETHRESHOLD*(thresholdMultiplier-THRESHOLDINCREMENT)+dacAverage/10){ //this is where we'll want to add in the DAC info as a multiplier
+		  else if(micAverage<BASETHRESHOLD*(thresholdMultiplier-THRESHOLDINCREMENT)+dacAverage/DACDIVIDER){ //this is where we'll want to add in the DAC info as a multiplier
 //			  thresholdHighCounter = 0;
 //			  thresholdLowCounter++;
 			  if(thresholdCounter > -100)
